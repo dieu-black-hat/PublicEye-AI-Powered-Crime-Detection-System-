@@ -1,0 +1,378 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2><i class="fas fa-chart-line"></i> Police Dashboard</h2>
+<hr>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary mb-3 stat-card">
+            <div class="card-body">
+                <h5 class="card-title">Total Cameras</h5>
+                <h2>{{ total_cameras }}</h2>
+                <small>Active: {{ active_cameras }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger mb-3 stat-card">
+            <div class="card-body">
+                <h5 class="card-title">Total Alerts</h5>
+                <h2>{{ total_alerts }}</h2>
+                <small>Pending: {{ pending_alerts }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning mb-3 stat-card">
+            <div class="card-body">
+                <h5 class="card-title">Response Rate</h5>
+                <h2>95%</h2>
+                <small>Average response time: 4.5 min</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3 stat-card">
+            <div class="card-body">
+                <h5 class="card-title">AI Accuracy</h5>
+                <h2>{{ accuracy }}%</h2>
+                <small>AI detection accuracy</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-bell"></i> Recent Crime Alerts</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Alert ID</th>
+                                <th>Location</th>
+                                <th>Crime Type</th>
+                                <th>Confidence</th>
+                                <th>Status</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for alert in recent_alerts %}
+                            <tr class="{% if alert.status == 'pending' %}table-danger{% endif %}">
+                                <td>
+                                    <a href="{% url 'core:alert_detail' alert.alert_id %}">{{ alert.alert_id }}</a>
+                                </td>
+                                <td>{{ alert.location|truncatechars:30 }}</td>
+                                <td>
+                                    <span class="badge bg-{% if alert.crime_type == 'theft' %}warning{% elif alert.crime_type == 'assault' %}danger{% elif alert.crime_type == 'fight' %}danger{% else %}info{% endif %}">
+                                        {{ alert.get_crime_type_display }}
+                                    </span>
+                                </td>
+                                <td>{{ alert.confidence_score|floatformat:1 }}%</td>
+                                <td>
+                                    <span class="badge bg-{% if alert.status == 'pending' %}danger{% elif alert.status == 'investigating' %}warning{% elif alert.status == 'resolved' %}success{% else %}secondary{% endif %}">
+                                        {{ alert.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>{{ alert.timestamp|timesince }} ago</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center">No alerts yet</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <!-- Quick Actions Card -->
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white">
+                <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <a href="{% url 'core:camera_feed' %}" class="btn btn-primary w-100 mb-2">
+                    <i class="fas fa-video"></i> View Live Feeds
+                </a>
+                <a href="{% url 'core:upload_video' %}" class="btn btn-secondary w-100 mb-2">
+                    <i class="fas fa-upload"></i> Upload Video
+                </a>
+                <a href="{% url 'core:manage_cameras' %}" class="btn btn-info w-100 mb-2">
+                    <i class="fas fa-plus"></i> Add Camera
+                </a>
+                <a href="{% url 'core:analytics_dashboard' %}" class="btn btn-success w-100">
+                    <i class="fas fa-chart-line"></i> View Analytics
+                </a>
+            </div>
+        </div>
+
+        <!-- Sound Settings Card -->
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5><i class="fas fa-volume-up"></i> Alert Sound Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="soundToggleSwitch" checked style="cursor: pointer;">
+                    <label class="form-check-label" for="soundToggleSwitch" style="cursor: pointer;">
+                        <i class="fas fa-bell"></i> Enable Sound Alerts
+                    </label>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">
+                        <i class="fas fa-volume-down"></i> Alert Volume
+                    </label>
+                    <input type="range" class="form-range" id="alertVolume" min="0" max="100" value="70">
+                    <small class="text-muted">Adjust notification volume</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">
+                        <i class="fas fa-chart-line"></i> Severity Levels
+                    </label>
+                    <div class="small">
+                        <span class="badge bg-danger">🔴 CRITICAL</span> - 3 loud beeps + siren
+                        <br>
+                        <span class="badge bg-warning text-dark">🟡 WARNING</span> - 2 beeps
+                        <br>
+                        <span class="badge bg-info">🔵 CAUTION</span> - 1 soft beep
+                    </div>
+                </div>
+                
+                <button class="btn btn-primary w-100 mb-2" onclick="testSoundAlarm()">
+                    <i class="fas fa-play"></i> Test Sound
+                </button>
+                
+                <button class="btn btn-secondary w-100" onclick="resetSoundSettings()">
+                    <i class="fas fa-undo"></i> Reset Settings
+                </button>
+            </div>
+        </div>
+
+        <!-- System Status Card -->
+        <div class="card mt-3">
+            <div class="card-header bg-info text-white">
+                <h5><i class="fas fa-info-circle"></i> System Status</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>WebSocket:</strong> 
+                    <span id="wsStatusBadge" class="badge bg-success">● Connected</span>
+                </p>
+                <p><strong>AI Detection:</strong> 
+                    <span class="badge bg-success">Active</span>
+                </p>
+                <p><strong>Analytics:</strong> 
+                    <span class="badge bg-success">Live</span>
+                </p>
+                <p><strong>Last Alert:</strong> 
+                    <span id="lastAlertTime">Just now</span>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Sound settings from localStorage
+    function initSoundSettingsUI() {
+        const savedSound = localStorage.getItem('soundEnabled');
+        const soundToggle = document.getElementById('soundToggleSwitch');
+        if (soundToggle) {
+            soundToggle.checked = savedSound !== 'false';
+        }
+        
+        const savedVolume = localStorage.getItem('alertVolume');
+        const volumeSlider = document.getElementById('alertVolume');
+        if (volumeSlider && savedVolume) {
+            volumeSlider.value = savedVolume;
+        }
+    }
+    
+    // Sound toggle switch handler
+    document.getElementById('soundToggleSwitch').addEventListener('change', function(e) {
+        const isEnabled = e.target.checked;
+        localStorage.setItem('soundEnabled', isEnabled);
+        if (typeof toggleSound === 'function') {
+            toggleSound();
+        }
+        showToastMessage(isEnabled ? 'Sound alerts enabled' : 'Sound alerts disabled', isEnabled ? 'success' : 'info');
+    });
+    
+    // Volume control
+    document.getElementById('alertVolume').addEventListener('input', function(e) {
+        const volume = e.target.value;
+        localStorage.setItem('alertVolume', volume);
+        if (window.audioContext) {
+            // Volume change effect (visual feedback)
+            showToastMessage(`Volume set to ${volume}%`, 'info');
+        }
+    });
+    
+    // Reset sound settings
+    function resetSoundSettings() {
+        localStorage.setItem('soundEnabled', 'true');
+        localStorage.setItem('alertVolume', '70');
+        
+        const soundToggle = document.getElementById('soundToggleSwitch');
+        if (soundToggle) soundToggle.checked = true;
+        
+        const volumeSlider = document.getElementById('alertVolume');
+        if (volumeSlider) volumeSlider.value = 70;
+        
+        if (typeof toggleSound === 'function') {
+            // Ensure sound is enabled
+            if (typeof isSoundEnabled !== 'undefined' && !isSoundEnabled) {
+                toggleSound();
+            }
+        }
+        
+        showToastMessage('Sound settings reset to default', 'success');
+        
+        // Test sound after reset
+        setTimeout(() => {
+            if (typeof testSoundAlarm === 'function') {
+                testSoundAlarm();
+            }
+        }, 500);
+    }
+    
+    // Update WebSocket status
+    function updateWebSocketStatus(connected) {
+        const statusBadge = document.getElementById('wsStatusBadge');
+        if (statusBadge) {
+            if (connected) {
+                statusBadge.className = 'badge bg-success';
+                statusBadge.innerHTML = '● Connected';
+            } else {
+                statusBadge.className = 'badge bg-danger';
+                statusBadge.innerHTML = '● Disconnected';
+            }
+        }
+    }
+    
+    // Update last alert time
+    function updateLastAlertTime() {
+        const lastAlertSpan = document.getElementById('lastAlertTime');
+        if (lastAlertSpan) {
+            lastAlertSpan.innerHTML = new Date().toLocaleTimeString();
+        }
+    }
+    
+    // Show toast message
+    function showToastMessage(message, type) {
+        const toastContainer = document.getElementById('toastContainer');
+        if (!toastContainer) return;
+        
+        const bgClass = type === 'success' ? 'bg-success' : (type === 'error' ? 'bg-danger' : 'bg-info');
+        const icon = type === 'success' ? 'check-circle' : (type === 'error' ? 'exclamation-triangle' : 'info-circle');
+        
+        const toastHtml = `
+            <div class="toast align-items-center text-white ${bgClass} border-0" role="alert" 
+                 data-bs-autohide="true" data-bs-delay="3000">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas fa-${icon} me-2"></i>
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        `;
+        
+        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+        const toast = new bootstrap.Toast(toastContainer.lastElementChild);
+        toast.show();
+        
+        setTimeout(() => {
+            if (toastContainer.lastElementChild) {
+                toastContainer.lastElementChild.remove();
+            }
+        }, 3000);
+    }
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        initSoundSettingsUI();
+        
+        // Update WebSocket status periodically
+        if (typeof socket !== 'undefined') {
+            setInterval(() => {
+                const connected = socket && socket.readyState === WebSocket.OPEN;
+                updateWebSocketStatus(connected);
+            }, 5000);
+        }
+        
+        // Listen for crime alerts (if WebSocket)
+        if (typeof socket !== 'undefined' && socket) {
+            socket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                if (data.type === 'crime_alert') {
+                    updateLastAlertTime();
+                }
+            };
+        }
+    });
+    
+    // Expose functions globally
+    window.resetSoundSettings = resetSoundSettings;
+    window.showToastMessage = showToastMessage;
+    window.updateWebSocketStatus = updateWebSocketStatus;
+</script>
+
+<style>
+    .stat-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        cursor: pointer;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+    }
+    .card {
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        border: none;
+    }
+    .card-header {
+        border-radius: 12px 12px 0 0;
+        font-weight: 600;
+    }
+    .btn {
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    .btn:hover {
+        transform: translateY(-2px);
+    }
+    .form-range {
+        cursor: pointer;
+    }
+    .form-switch .form-check-input {
+        cursor: pointer;
+        width: 3em;
+        height: 1.5em;
+    }
+    .badge {
+        font-weight: 500;
+        padding: 5px 10px;
+    }
+    .table th {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+    }
+    .table td {
+        vertical-align: middle;
+    }
+</style>
+{% endblock %}

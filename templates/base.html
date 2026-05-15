@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>PublicEye - AI Crime Detection System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <style>
+        /* Real-time alert indicator animation */
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        @keyframes blink {
+            0%, 100% { background-color: #dc3545; }
+            50% { background-color: #ff6b6b; }
+        }
+        
+        .alert-badge {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .alert-badge .badge-count {
+            position: absolute;
+            top: -8px;
+            right: -12px;
+            background-color: #dc3545;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 10px;
+            font-weight: bold;
+            animation: pulse 1s infinite;
+        }
+        
+        .live-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #28a745;
+            margin-right: 5px;
+            animation: blink 1.5s infinite;
+        }
+        
+        .navbar {
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%) !important;
+        }
+        
+        .nav-link {
+            transition: all 0.3s ease;
+            color: rgba(255,255,255,0.9) !important;
+        }
+        
+        .nav-link:hover {
+            transform: translateY(-2px);
+            color: white !important;
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .nav-link.active {
+            background: rgba(102,126,234,0.3);
+            border-bottom: 2px solid #667eea;
+            color: white !important;
+        }
+        
+        #ws-status {
+            cursor: pointer;
+            font-size: 11px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        #ws-status:hover {
+            transform: scale(1.05);
+        }
+        
+        #soundToggle {
+            cursor: pointer;
+            font-size: 12px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        #soundToggle:hover {
+            transform: scale(1.05);
+        }
+        
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+        
+        .alert-flash {
+            animation: alertFlash 0.5s ease-in-out;
+        }
+        
+        @keyframes alertFlash {
+            0%, 100% { background-color: transparent; }
+            50% { background-color: rgba(220, 53, 69, 0.1); }
+        }
+        
+        .badge-notification {
+            position: relative;
+        }
+        
+        .badge-notification .notification-dot {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 12px;
+            height: 12px;
+            background-color: #ffc107;
+            border-radius: 50%;
+            animation: pulse 1s infinite;
+        }
+        
+        /* Footer styling */
+        .footer {
+            margin-top: 50px;
+            border-top: 1px solid #e9ecef;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+        }
+        
+        .footer .text-muted {
+            color: rgba(255,255,255,0.7) !important;
+        }
+        
+        /* Loading spinner */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(0,0,0,0.1);
+            border-radius: 50%;
+            border-top-color: #667eea;
+            animation: spin 0.6s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Dropdown menu styling */
+        .dropdown-menu {
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border: none;
+        }
+        
+        .dropdown-item:hover {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        /* Button styling */
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102,126,234,0.4);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'core:home' %}">
+                <i class="fas fa-eye"></i> <strong>PublicEye</strong>
+                {% if user.is_authenticated %}
+                <span class="badge bg-info ms-2">AI-Powered</span>
+                {% endif %}
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'core:dashboard' %}">
+                                <i class="fas fa-chart-line"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'camera_feed' %}active{% endif %}" href="{% url 'core:camera_feed' %}">
+                                <i class="fas fa-video"></i> Cameras
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'upload_video' %}active{% endif %}" href="{% url 'core:upload_video' %}">
+                                <i class="fas fa-upload"></i> Upload
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'analytics_dashboard' %}active{% endif %}" href="{% url 'core:analytics_dashboard' %}">
+                                <i class="fas fa-chart-line"></i> Analytics
+                            </a>
+                        </li>
+                        <li class="nav-item alert-badge">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'alerts' %}active{% endif %}" href="{% url 'core:alerts' %}">
+                                <i class="fas fa-bell"></i> Alerts
+                                <span class="badge-count" id="alertBadge" style="display: none;">0</span>
+                            </a>
+                        </li>
+                        <!-- Sound Toggle Button -->
+                        <li class="nav-item me-2">
+                            <button id="soundToggle" class="btn btn-sm btn-success" onclick="toggleSound()" title="Toggle Sound Alerts">
+                                <i class="fas fa-volume-up"></i> Sound On
+                            </button>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-user-shield"></i> {{ user.username }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="#">
+                                    <i class="fas fa-id-card"></i> Profile
+                                </a></li>
+                                <li><a class="dropdown-item" href="#">
+                                    <i class="fas fa-cog"></i> Settings
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="{% url 'core:logout' %}">
+                                    <i class="fas fa-sign-out-alt"></i> Logout
+                                </a></li>
+                            </ul>
+                        </li>
+                        <!-- WebSocket Status Indicator -->
+                        <li class="nav-item ms-2">
+                            <span id="ws-status" class="badge bg-secondary" title="Real-time alert connection status">
+                                <i class="fas fa-plug"></i> Connecting...
+                            </span>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link btn btn-primary text-white px-4" href="{% url 'core:login' %}">
+                                <i class="fas fa-sign-in-alt"></i> Police Login
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="py-4">
+        <div class="container">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% else %}info-circle{% endif %} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+            
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Toast Container for Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Footer -->
+    <footer class="footer mt-auto py-3">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6 text-center text-md-start">
+                    <span class="text-muted">
+                        <i class="fas fa-shield-alt"></i> PublicEye AI Crime Detection System v1.0
+                    </span>
+                </div>
+                <div class="col-md-6 text-center text-md-end">
+                    <span class="text-muted">
+                        Powered by Django & OpenCV | <i class="fas fa-lock"></i> Secure Police Access
+                    </span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    {% load static %}
+    <script src="{% static 'js/main.js' %}"></script>
+    
+    <script>
+        // Toast notification function
+        function showToast(message, type = 'info') {
+            const bgClass = type === 'success' ? 'bg-success' : (type === 'error' ? 'bg-danger' : 'bg-info');
+            const icon = type === 'success' ? 'check-circle' : (type === 'error' ? 'exclamation-triangle' : 'info-circle');
+            
+            const toastHtml = `
+                <div class="toast align-items-center text-white ${bgClass} border-0" role="alert" data-bs-autohide="true" data-bs-delay="3000">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="fas fa-${icon} me-2"></i>
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            
+            $('#toastContainer').append(toastHtml);
+            const toast = new bootstrap.Toast($('#toastContainer .toast').last());
+            toast.show();
+            
+            setTimeout(() => {
+                $('#toastContainer .toast').last().remove();
+            }, 3000);
+        }
+
+        // Update alert badge count
+        function updateAlertBadge(count) {
+            const badge = $('#alertBadge');
+            if (count > 0) {
+                badge.text(count).show();
+                document.title = `(${count}) PublicEye - AI Crime Detection System`;
+            } else {
+                badge.hide();
+                document.title = 'PublicEye - AI Crime Detection System';
+            }
+        }
+        
+        // Fetch initial alert count
+        {% if user.is_authenticated %}
+        $.ajax({
+            url: '/api/stats/',
+            method: 'GET',
+            success: function(data) {
+                const pendingCount = data.by_status?.['Pending Review'] || 0;
+                if (pendingCount > 0) {
+                    updateAlertBadge(pendingCount);
+                }
+            },
+            error: function() {
+                console.log('Could not fetch alert count');
+            }
+        });
+        
+        // Periodically check for new alerts
+        setInterval(function() {
+            $.ajax({
+                url: '/api/stats/',
+                method: 'GET',
+                success: function(data) {
+                    const pendingCount = data.by_status?.['Pending Review'] || 0;
+                    updateAlertBadge(pendingCount);
+                }
+            });
+        }, 30000);
+        {% endif %}
+        
+        // Add smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+        
+        // Auto-hide alerts after 10 seconds
+        setTimeout(() => {
+            $('.alert').fadeOut('slow', function() {
+                $(this).remove();
+            });
+        }, 10000);
+        
+        // Add CSRF token to all AJAX requests
+        $.ajaxSetup({
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        });
+        
+        // Set active nav link based on current path
+        const currentPath = window.location.pathname;
+        $('.nav-link').each(function() {
+            const href = $(this).attr('href');
+            if (href && href !== '#' && currentPath === href) {
+                $(this).addClass('active');
+            }
+        });
+        
+        // Initialize sound settings from localStorage
+        function initBaseSoundSettings() {
+            const savedSound = localStorage.getItem('soundEnabled');
+            const soundBtn = $('#soundToggle');
+            if (soundBtn.length) {
+                if (savedSound === 'false') {
+                    soundBtn.html('<i class="fas fa-volume-mute"></i> Sound Off');
+                    soundBtn.removeClass('btn-success').addClass('btn-secondary');
+                } else {
+                    soundBtn.html('<i class="fas fa-volume-up"></i> Sound On');
+                    soundBtn.removeClass('btn-secondary').addClass('btn-success');
+                }
+            }
+        }
+        
+        // Toggle sound function (will be overridden by main.js if available)
+        window.toggleSound = function() {
+            const soundBtn = $('#soundToggle');
+            const isCurrentlyOn = soundBtn.hasClass('btn-success');
+            
+            if (isCurrentlyOn) {
+                soundBtn.html('<i class="fas fa-volume-mute"></i> Sound Off');
+                soundBtn.removeClass('btn-success').addClass('btn-secondary');
+                localStorage.setItem('soundEnabled', 'false');
+                showToast('Sound alerts disabled', 'info');
+            } else {
+                soundBtn.html('<i class="fas fa-volume-up"></i> Sound On');
+                soundBtn.removeClass('btn-secondary').addClass('btn-success');
+                localStorage.setItem('soundEnabled', 'true');
+                showToast('Sound alerts enabled', 'success');
+                // Test sound when enabling
+                if (typeof testSoundAlarm === 'function') {
+                    setTimeout(() => testSoundAlarm(), 500);
+                }
+            }
+            
+            // Update global sound state if available
+            if (typeof isSoundEnabled !== 'undefined') {
+                window.isSoundEnabled = isCurrentlyOn ? false : true;
+            }
+        };
+        
+        // Initialize base settings
+        initBaseSoundSettings();
+        
+        console.log('PublicEye System Initialized at {{ request.build_absolute_uri }}');
+        console.log('Current user: {% if user.is_authenticated %}{{ user.username }}{% else %}Anonymous{% endif %}');
+        
+        // Show welcome toast on login
+        {% if user.is_authenticated and request.GET.next is None %}
+        setTimeout(function() {
+            showToast('Welcome back, {{ user.username }}!', 'success');
+        }, 500);
+        {% endif %}
+        
+        // Keyboard shortcuts
+        $(document).keydown(function(e) {
+            // Ctrl + D for Dashboard
+            if (e.ctrlKey && e.key === 'd') {
+                window.location.href = "{% url 'core:dashboard' %}";
+                e.preventDefault();
+            }
+            // Ctrl + A for Alerts
+            if (e.ctrlKey && e.key === 'a') {
+                window.location.href = "{% url 'core:alerts' %}";
+                e.preventDefault();
+            }
+            // Ctrl + U for Upload
+            if (e.ctrlKey && e.key === 'u') {
+                window.location.href = "{% url 'core:upload_video' %}";
+                e.preventDefault();
+            }
+            // Ctrl + G for Analytics
+            if (e.ctrlKey && e.key === 'g') {
+                window.location.href = "{% url 'core:analytics_dashboard' %}";
+                e.preventDefault();
+            }
+            // Ctrl + S for Sound Toggle
+            if (e.ctrlKey && e.key === 's') {
+                toggleSound();
+                e.preventDefault();
+            }
+        });
+        
+        console.log('Keyboard shortcuts enabled: Ctrl+D (Dashboard), Ctrl+A (Alerts), Ctrl+U (Upload), Ctrl+G (Analytics), Ctrl+S (Sound Toggle)');
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

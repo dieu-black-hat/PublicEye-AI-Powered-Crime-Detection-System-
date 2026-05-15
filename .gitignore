@@ -1,0 +1,218 @@
+# ============================================================
+# Python
+# ============================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+pythonenv*
+*.egg-info/
+*.egg
+dist/
+build/
+develop-eggs/
+downloads/
+eggs/
+parts/
+sdist/
+var/
+wheels/
+*.whl
+
+# ============================================================
+# Django
+# ============================================================
+*.log
+*.pot
+*.pyc
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+static/CACHE/
+*.sql
+migrations/
+!core/migrations/__init__.py
+
+# ============================================================
+# Project Specific - PublicEye
+# ============================================================
+# Uploaded media files
+media/uploads/
+media/crime_clips/
+media/crime_screenshots/
+media/camera_snapshots/
+
+# Logs
+logs/
+*.log
+alerts.log
+publiceye.log
+
+# Models (AI models are large)
+models/
+*.h5
+*.pkl
+*.joblib
+*.onnx
+
+# Static files collected
+staticfiles/
+static/CACHE/
+
+# ============================================================
+# IDE and Editor Files
+# ============================================================
+# VS Code
+.vscode/
+*.code-workspace
+.history/
+
+# PyCharm
+.idea/
+*.iml
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+.~*
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ============================================================
+# Environment Variables
+# ============================================================
+.env
+.env.local
+.env.production
+.env.development
+*.env
+
+# ============================================================
+# Operating System Files
+# ============================================================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+Icon?
+
+# Linux
+.directory
+*.swp
+*~
+
+# ============================================================
+# Testing & Coverage
+# ============================================================
+.coverage
+.coverage.*
+.htmlcov/
+.tox/
+.pytest_cache/
+*.cover
+.hypothesis/
+*.test.db
+nosetests.xml
+coverage.xml
+*.,cover
+
+# ============================================================
+# Docker
+# ============================================================
+*.pid
+docker-compose.override.yml
+.dockerignore
+
+# ============================================================
+# Database
+# ============================================================
+*.db
+*.sqlite
+*.sqlite3
+*.mdb
+*.accdb
+
+# ============================================================
+# Backup Files
+# ============================================================
+*.bak
+*.backup
+*.tmp
+*.temp
+*.old
+*.orig
+
+# ============================================================
+# Secret Keys and Certificates
+# ============================================================
+*.key
+*.pem
+*.crt
+*.p12
+.secret_key
+secret_key.txt
+
+# ============================================================
+# Celery
+# ============================================================
+celerybeat-schedule
+celerybeat.pid
+
+# ============================================================
+# Jupyter Notebook
+# ============================================================
+.ipynb_checkpoints
+*.ipynb
+
+# ============================================================
+# Profiling Data
+# ============================================================
+*.prof
+*.lprof
+
+# ============================================================
+# Sensitive Data
+# ============================================================
+passwords.txt
+credentials.json
+service-account.json
+*.key.json
+
+# ============================================================
+# Deployment
+# ============================================================
+*.pid
+*.seed
+*.pid.lock

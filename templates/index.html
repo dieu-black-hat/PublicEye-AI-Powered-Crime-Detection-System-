@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="hero-section text-center py-5">
+    <div class="container">
+        <h1 class="display-4 fw-bold">PublicEye AI Crime Detection System</h1>
+        <p class="lead">Advanced AI-powered surveillance for public safety</p>
+        <div class="mt-4">
+            {% if not user.is_authenticated %}
+                <a href="{% url 'core:login' %}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-shield-alt"></i> Police Access
+                </a>
+            {% else %}
+                <a href="{% url 'core:dashboard' %}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-chart-line"></i> Go to Dashboard
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="features-section py-5 bg-light">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4 text-center mb-4">
+                <div class="feature-card p-4">
+                    <i class="fas fa-video fa-3x text-primary mb-3"></i>
+                    <h3>Real-time Monitoring</h3>
+                    <p>24/7 AI-powered surveillance of high-risk areas</p>
+                </div>
+            </div>
+            <div class="col-md-4 text-center mb-4">
+                <div class="feature-card p-4">
+                    <i class="fas fa-brain fa-3x text-primary mb-3"></i>
+                    <h3>AI Crime Detection</h3>
+                    <p>Advanced algorithms detect 7+ types of crimes</p>
+                </div>
+            </div>
+            <div class="col-md-4 text-center mb-4">
+                <div class="feature-card p-4">
+                    <i class="fas fa-bell fa-3x text-primary mb-3"></i>
+                    <h3>Instant Alerts</h3>
+                    <p>Immediate notification to police departments</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

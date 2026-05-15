@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-exclamation-triangle"></i> Alert Details</h2>
+        <a href="{% url 'core:alerts' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Alerts
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Alert Information Card -->
+            <div class="card mb-4">
+                <div class="card-header {% if alert.status == 'pending' %}bg-danger{% elif alert.status == 'investigating' %}bg-warning{% else %}bg-success{% endif %} text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-bell"></i> {{ alert.alert_id }}
+                        <span class="float-end">
+                            <span class="badge bg-light text-dark">
+                                {{ alert.timestamp|date:"Y-m-d H:i:s" }}
+                            </span>
+                        </span>
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong><i class="fas fa-tag"></i> Crime Type:</strong></p>
+                            <h4>
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-{% if alert.crime_type == 'theft' %}hand-lizard{% elif alert.crime_type == 'assault' or alert.crime_type == 'fight' %}fist-raised{% else %}exclamation-triangle{% endif %}"></i>
+                                    {{ alert.get_crime_type_display }}
+                                </span>
+                            </h4>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong><i class="fas fa-chart-line"></i> AI Confidence Score:</strong></p>
+                            <div class="progress" style="height: 30px;">
+                                <div class="progress-bar {% if alert.confidence_score > 80 %}bg-danger{% elif alert.confidence_score > 60 %}bg-warning{% else %}bg-info{% endif %} 
+                                     progress-bar-striped" role="progressbar" 
+                                     style="width: {{ alert.confidence_score }}%; font-size: 14px; font-weight: bold;">
+                                    {{ alert.confidence_score|floatformat:1 }}%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong><i class="fas fa-map-marker-alt"></i> Location:</strong></p>
+                            <p>{{ alert.location }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong><i class="fas fa-video"></i> Camera:</strong></p>
+                            <p>{{ alert.camera.camera_id }} - {{ alert.camera.location }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12">
+                            <p><strong><i class="fas fa-align-left"></i> Description:</strong></p>
+                            <p>{{ alert.description }}</p>
+                        </div>
+                    </div>
+                    
+                    {% if alert.additional_notes %}
+                    <div class="row">
+                        <div class="col-12">
+                            <p><strong><i class="fas fa-sticky-note"></i> Investigation Notes:</strong></p>
+                            <div class="alert alert-info">
+                                {{ alert.additional_notes }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Screenshot Card -->
+            {% if alert.screenshot %}
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-camera"></i> Crime Scene Screenshot</h5>
+                </div>
+                <div class="card-body text-center">
+                    <img src="{{ alert.screenshot.url }}" class="img-fluid rounded" alt="Crime Screenshot" style="max-height: 400px;">
+                    <div class="mt-2">
+                        <a href="{{ alert.screenshot.url }}" download class="btn btn-sm btn-primary">
+                            <i class="fas fa-download"></i> Download Screenshot
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Video Clip Card -->
+            {% if alert.video_clip %}
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-video"></i> Video Evidence</h5>
+                </div>
+                <div class="card-body">
+                    <video controls class="w-100" style="max-height: 300px;">
+                        <source src="{{ alert.video_clip.url }}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                    <div class="mt-2">
+                        <a href="{{ alert.video_clip.url }}" download class="btn btn-sm btn-primary">
+                            <i class="fas fa-download"></i> Download Video
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Status Update Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-edit"></i> Update Status</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Current Status</label>
+                            <select name="status" class="form-select">
+                                <option value="pending" {% if alert.status == 'pending' %}selected{% endif %}>🚨 Pending Review</option>
+                                <option value="investigating" {% if alert.status == 'investigating' %}selected{% endif %}>🔍 Under Investigation</option>
+                                <option value="dispatched" {% if alert.status == 'dispatched' %}selected{% endif %}>🚔 Police Dispatched</option>
+                                <option value="resolved" {% if alert.status == 'resolved' %}selected{% endif %}>✅ Resolved</option>
+                                <option value="false_alarm" {% if alert.status == 'false_alarm' %}selected{% endif %}>❌ False Alarm</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Investigation Notes</label>
+                            <textarea name="additional_notes" class="form-control" rows="4" 
+                                      placeholder="Add investigation notes, witness statements, officer actions...">{{ alert.additional_notes }}</textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-save"></i> Update Alert
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Police Notification Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-bell"></i> Notifications</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Reported to Police:</strong> 
+                        {% if alert.reported_to_police %}
+                            <span class="badge bg-success">Yes</span>
+                        {% else %}
+                            <span class="badge bg-danger">No</span>
+                        {% endif %}
+                    </p>
+                    {% if alert.police_response_time %}
+                    <p><strong>Response Time:</strong> {{ alert.police_response_time|date:"Y-m-d H:i:s" }}</p>
+                    {% endif %}
+                    
+                    {% if alert.resolved_at %}
+                    <p><strong>Resolved At:</strong> {{ alert.resolved_at|date:"Y-m-d H:i:s" }}</p>
+                    {% endif %}
+                    
+                    <hr>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> 
+                        <strong>Alert Timeline:</strong><br>
+                        Created: {{ alert.timestamp|timesince }} ago
+                        {% if alert.resolved_at %}
+                        <br>Resolved: {{ alert.resolved_at|timesince }} after creation
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Actions Card -->
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-bolt"></i> Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-outline-primary w-100 mb-2" onclick="window.print()">
+                        <i class="fas fa-print"></i> Print Report
+                    </button>
+                    <button class="btn btn-outline-info w-100" onclick="copyAlertDetails()">
+                        <i class="fas fa-copy"></i> Copy Details
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyAlertDetails() {
+    const details = `
+Alert ID: {{ alert.alert_id }}
+Crime Type: {{ alert.get_crime_type_display }}
+Confidence: {{ alert.confidence_score }}%
+Location: {{ alert.location }}
+Status: {{ alert.get_status_display }}
+Time: {{ alert.timestamp|date:"Y-m-d H:i:s" }}
+Description: {{ alert.description }}
+    `;
+    navigator.clipboard.writeText(details);
+    alert('Alert details copied to clipboard!');
+}
+</script>
+
+<style>
+    .progress {
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .card {
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .btn-group {
+        gap: 5px;
+    }
+</style>
+{% endblock %}

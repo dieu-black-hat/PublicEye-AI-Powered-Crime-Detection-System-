@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-video"></i> Camera Management</h2>
+        <div>
+            <a href="{% url 'core:manage_cameras' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add Camera
+            </a>
+        </div>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" name="search" class="form-control" placeholder="Search by ID or location..." 
+                           value="{{ search_query }}">
+                </div>
+                <div class="col-md-3">
+                    <select name="status" class="form-select">
+                        <option value="">All Status</option>
+                        <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                        <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+                        <option value="maintenance" {% if status_filter == 'maintenance' %}selected{% endif %}>Maintenance</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Cameras Grid -->
+    {% if cameras %}
+        <div class="row">
+            {% for camera in cameras %}
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">{{ camera.camera_id }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><i class="fas fa-map-marker-alt"></i> <strong>Location:</strong> {{ camera.location }}</p>
+                        <p><i class="fas fa-info-circle"></i> <strong>Status:</strong> 
+                            <span class="badge bg-{% if camera.status == 'active' %}success{% elif camera.status == 'inactive' %}secondary{% else %}warning{% endif %}">
+                                {{ camera.get_status_display }}
+                            </span>
+                        </p>
+                        {% if camera.ip_address %}
+                        <p><i class="fas fa-network-wired"></i> <strong>IP:</strong> {{ camera.ip_address }}</p>
+                        {% endif %}
+                        <p><i class="fas fa-calendar"></i> <strong>Installed:</strong> {{ camera.installed_date|date:"Y-m-d" }}</p>
+                    </div>
+                    <div class="card-footer">
+                        <div class="btn-group w-100">
+                            <a href="{% url 'core:live_stream' camera.camera_id %}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-play"></i> Live View
+                            </a>
+                            <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#cameraModal{{ camera.id }}">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edit Camera Modal -->
+            <div class="modal fade" id="cameraModal{{ camera.id }}" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <form method="post" action="{% url 'core:manage_cameras' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="edit">
+                            <input type="hidden" name="camera_id" value="{{ camera.camera_id }}">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Edit Camera: {{ camera.camera_id }}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Location</label>
+                                    <input type="text" name="location" class="form-control" value="{{ camera.location }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">IP Address</label>
+                                    <input type="text" name="ip_address" class="form-control" value="{{ camera.ip_address }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Stream URL</label>
+                                    <input type="text" name="stream_url" class="form-control" value="{{ camera.stream_url }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Status</label>
+                                    <select name="status" class="form-select">
+                                        <option value="active" {% if camera.status == 'active' %}selected{% endif %}>Active</option>
+                                        <option value="inactive" {% if camera.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                                        <option value="maintenance" {% if camera.status == 'maintenance' %}selected{% endif %}>Maintenance</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Description</label>
+                                    <textarea name="description" class="form-control" rows="3">{{ camera.description }}</textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if cameras.has_other_pages %}
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if cameras.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page={{ cameras.previous_page_number }}">Previous</a></li>
+                {% endif %}
+                
+                {% for num in cameras.paginator.page_range %}
+                    <li class="page-item {% if cameras.number == num %}active{% endif %}">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                {% endfor %}
+                
+                {% if cameras.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ cameras.next_page_number }}">Next</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-info text-center">
+            <i class="fas fa-info-circle"></i> No cameras found. 
+            <a href="{% url 'core:manage_cameras' %}" class="alert-link">Click here to add your first camera</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

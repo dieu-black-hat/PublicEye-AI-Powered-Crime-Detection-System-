@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-bell"></i> Crime Alerts</h2>
+        <div>
+            <a href="{% url 'core:export_alerts' %}" class="btn btn-success">
+                <i class="fas fa-download"></i> Export CSV
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="fas fa-filter"></i> Filter Alerts</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Crime Type</label>
+                    <select name="crime_type" class="form-select">
+                        <option value="">All Types</option>
+                        {% for code, name in crime_types %}
+                        <option value="{{ code }}" {% if selected_crime_type == code %}selected{% endif %}>
+                            {{ name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All Status</option>
+                        {% for code, name in status_choices %}
+                        <option value="{{ code }}" {% if selected_status == code %}selected{% endif %}>
+                            {{ name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <label class="form-label">From Date</label>
+                    <input type="date" name="from_date" class="form-control" value="{{ from_date }}">
+                </div>
+                
+                <div class="col-md-2">
+                    <label class="form-label">To Date</label>
+                    <input type="date" name="to_date" class="form-control" value="{{ to_date }}">
+                </div>
+                
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i> Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Alerts Table -->
+    {% if alerts %}
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Alert ID</th>
+                            <th>Crime Type</th>
+                            <th>Location</th>
+                            <th>Confidence</th>
+                            <th>Status</th>
+                            <th>Time</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for alert in alerts %}
+                        <tr class="{% if alert.status == 'pending' %}table-danger{% elif alert.status == 'investigating' %}table-warning{% endif %}">
+                            <td>
+                                <strong>{{ alert.alert_id }}</strong>
+                            </td>
+                            <td>
+                                <i class="fas fa-{% if alert.crime_type == 'theft' %}hand-lizard{% elif alert.crime_type == 'assault' %}fist-raised{% elif alert.crime_type == 'fight' %}fist-raised{% else %}exclamation-triangle{% endif %}"></i>
+                                {{ alert.get_crime_type_display }}
+                            </td>
+                            <td>{{ alert.location|truncatechars:50 }}</td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar {% if alert.confidence_score > 80 %}bg-danger{% elif alert.confidence_score > 60 %}bg-warning{% else %}bg-info{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ alert.confidence_score }}%;">
+                                        {{ alert.confidence_score|floatformat:1 }}%
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if alert.status == 'pending' %}danger{% elif alert.status == 'investigating' %}warning{% elif alert.status == 'resolved' %}success{% elif alert.status == 'false_alarm' %}secondary{% else %}info{% endif %}">
+                                    {{ alert.get_status_display }}
+                                </span>
+                            </td>
+                            <td>{{ alert.timestamp|timesince }} ago</td>
+                            <td>
+                                <a href="{% url 'core:alert_detail' alert.alert_id %}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if alerts.has_other_pages %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if alerts.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ alerts.previous_page_number }}{% if selected_crime_type %}&crime_type={{ selected_crime_type }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}">
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </a>
+                </li>
+            {% endif %}
+            
+            {% for num in alerts.paginator.page_range %}
+                <li class="page-item {% if alerts.number == num %}active{% endif %}">
+                    <a class="page-link" href="?page={{ num }}{% if selected_crime_type %}&crime_type={{ selected_crime_type }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}">
+                        {{ num }}
+                    </a>
+                </li>
+            {% endfor %}
+            
+            {% if alerts.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ alerts.next_page_number }}{% if selected_crime_type %}&crime_type={{ selected_crime_type }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="fas fa-bell-slash fa-4x text-muted mb-3"></i>
+            <h4>No Alerts Found</h4>
+            <p class="text-muted">No crime alerts have been generated yet.</p>
+            <a href="{% url 'core:upload_video' %}" class="btn btn-primary">
+                <i class="fas fa-upload"></i> Upload a Video to Test
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .table th {
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+    }
+    .table tr:hover {
+        background-color: #f5f5f5;
+    }
+    .progress {
+        border-radius: 10px;
+        overflow: hidden;
+    }
+</style>
+{% endblock %}
